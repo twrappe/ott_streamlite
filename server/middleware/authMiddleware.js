@@ -1,23 +1,20 @@
 import jwt from 'jsonwebtoken';
 
-const authMiddleware = (req, res, next) => {
+export default function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
 
-  // Check if the Authorization header exists and starts with "Bearer "
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No token provided' });
+    return res.status(401).json({ message: 'No token provided' });
   }
 
   const token = authHeader.split(' ')[1];
 
   try {
-    // Verify the JWT token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Attach user info to the request object
-    next(); // Proceed to the next middleware/route handler
+    req.user = decoded; // You can access req.user in protected routes
+    next();
   } catch (err) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    console.error('JWT Verification Error:', err);
+    return res.status(403).json({ message: 'Invalid or expired token' });
   }
-};
-
-export default authMiddleware; // Export the middleware
+}
