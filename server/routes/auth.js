@@ -13,9 +13,11 @@ router.post('/register', async (req, res) => {
     const user = new User({ username, email, password: hashed });
     await user.save();
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '1d',
-    });
+    const token = jwt.sign(
+      { id: user._id, role: user.role }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '1d', }
+    );
 
     res.status(201).json({ token, user: { username, email, _id: user._id } });
   } catch (err) {
@@ -32,9 +34,11 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid password' });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '1d',
-    });
+    const token = jwt.sign(
+      { id: user._id, role: user.role }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '1d', }
+    );
 
     res.status(200).json({ token, user: { username: user.username, email, _id: user._id } });
   } catch (err) {

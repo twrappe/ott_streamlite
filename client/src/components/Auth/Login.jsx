@@ -1,32 +1,32 @@
-import { useState } from 'react';
-import api from '../../utils/api';
-import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+// Login.jsx
+import React, { useState } from 'react';
+import { loginUser } from '../../api';
 
-export default function Login() {
-  const [form, setForm] = useState({ email: '', password: '' });
-  const { login } = useAuth();
-  const navigate = useNavigate();
+const Login = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setError('');
     try {
-      const res = await api.post('/auth/login', form);
-      login(res.data);
-      navigate('/');
+      const data = await loginUser(email, password);
+      console.log('Login success:', data);
+      // redirect or store token
     } catch (err) {
-      alert('Login failed');
+      setError(err.message); // Show error
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto p-4">
-      <h2 className="text-xl mb-4">Login</h2>
-      <input name="email" placeholder="Email" onChange={handleChange} className="input" />
-      <input name="password" type="password" placeholder="Password" onChange={handleChange} className="input" />
-      <button type="submit" className="btn">Login</button>
+    <form onSubmit={handleLogin}>
+      <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+      <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Password" />
+      <button type="submit">Login</button>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
     </form>
   );
-}
+};
+
+export default Login;
