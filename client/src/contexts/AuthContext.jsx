@@ -1,105 +1,72 @@
-// src/contexts/AuthContext.jsx
-import React, { createContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { loginUser, registerUser } from '../api'; // Import login and register functions from api.js
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import axios from '../api/api'; // Your Axios instance
 
-// Create Context for authentication state
 const AuthContext = createContext();
 
-// Provide the context to the app
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
+
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [authToken, setAuthToken] = useState(localStorage.getItem('token')); // Retrieve token from localStorage
-  const [loading, setLoading] = useState(true); // Loading state for checking authentication
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
+  const [token, setToken] = useState(localStorage.getItem('token'));
 
-  // Check if user is authenticated on app load
   useEffect(() => {
-    if (authToken) {
-      fetchUserDetails();
-    } else {
-      setLoading(false); // If no token, just set loading to false
-    }
-  }, [authToken]);
-
-  const fetchUserDetails = async () => {
-    try {
-      // Assuming you have a protected endpoint to fetch user info (you can adjust if needed)
-      const response = await fetch('http://localhost:5000/api/auth/verify', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data); // Set user data on successful verification
-      } else {
-        logoutUser(); // If verification fails, log out the user
+    const verifyToken = async () => {
+      if (!token) return;
+      try {
+        const res = await axios.get('/auth/verify', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUser(res.data.user);
+      } catch (err) {
+        console.error("Token invalid:", err);
+        setUser(null);
+        setToken(null);
+        localStorage.removeItem('token');
       }
-    } catch (err) {
-      console.error('Error fetching user details:', err);
-      logoutUser();
-    } finally {
-      setLoading(false); // Finished loading
-    }
-  };
+    };
 
-  // Login function
-  const login = async (email, password) => {
+    verifyToken();
+  }, [token]);
+
+  const loginUser = async (credentials) => {
     try {
-      const response = await loginUser(email, password);
-      localStorage.setItem('token', response.token); // Save token to localStorage
-      setAuthToken(response.token); // Set token in the state
-      setUser(response.user); // Set user data in the state
-      navigate('/'); // Redirect to home or dashboard after successful login
+      const res = await axios.post('/auth/login', credentials);
+      const newToken = res.data.token;
+      setToken(newToken);
+      localStorage.setItem('token', newToken);
+      setUser(res.data.user);
     } catch (err) {
-      setError(err);
+      console.error("Login failed:", err);
+      throw new Error("Login failed. Please check your credentials.");
     }
   };
 
-  // Register function
-  const register = async (email, password) => {
+  const registerUser = async (credentials) => {
     try {
-      const response = await registerUser(email, password);
-      localStorage.setItem('token', response.token); // Save token to localStorage
-      setAuthToken(response.token); // Set token in the state
-      setUser(response.user); // Set user data in the state
-      navigate('/'); // Redirect to home or dashboard after successful register
+      const res = await axios.post('/auth/register', credentials);
+      const newToken = res.data.token;
+      setToken(newToken);
+      localStorage.setItem('token', newToken);
+      setUser(res.data.user);
     } catch (err) {
-      setError(err);
+      console.error("Registration failed:", err);
+      throw new Error("Registration failed. Please try again.");
     }
   };
 
-  // Logout function
-  const logoutUser = () => {
-    localStorage.removeItem('token'); // Remove token from localStorage
-    setAuthToken(null); // Clear token in state
-    setUser(null); // Clear user data
-    navigate('/login'); // Redirect to login page
-  };
-
-  // Context values
-  const contextValue = {
-    user,
-    login,
-    register,
-    logoutUser,
-    loading,
-    error,
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('token');
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
-      {!loading && children} {/* Render children only after loading is complete */}
+    <AuthContext.Provider value={{ user, token, loginUser, registerUser, logout }}>
+      {children}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook to use authentication context
-const useAuth = () => {
-  return React.useContext(AuthContext);
-};
-
-export { AuthProvider, useAuth };
+export default AuthProvider;
